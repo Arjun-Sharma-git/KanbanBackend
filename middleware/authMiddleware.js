@@ -5,16 +5,19 @@ const verifyJwt = (req, res, next) => {
     if (!token)
       return res.send({
         success: "false",
-        data: "Unauthorised request on protected path",
+        data: "Unauthorised request on protected path"
       });
-    //our else condition cheks whether the token was tempred with or not
+    //our else condition checks whether the token was tempred with or not
     const decode = jwt.verify(token, process.env.JWT_SECRET);
     //adding userId to body of the request
     req.body.userId = decode.userId;
     next();
   }
   catch (err) {
-    res.send({ success: "false", data: "Invalid token" });
+    res.send({ 
+      success: "false", 
+      data: "Invalid token" 
+   });
   }
 };
 module.exports = verifyJwt;
