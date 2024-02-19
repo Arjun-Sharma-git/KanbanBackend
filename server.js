@@ -17,6 +17,9 @@ mongoose
     console.log("MongoDB connection failed!!", err);
   });
 
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/card", cardRoutes);
+app.use("/api/v1/analytics", analyticsRoutes);
 app.get("/health", (req, res) => {
   res.json("status:active");
 });

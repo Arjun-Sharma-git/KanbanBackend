@@ -24,13 +24,10 @@ const getAnalytics = async (userId) => {
     };
 
     alltasks.forEach((task) => {
-      // Count occurrences based on priority
       statistics.priority[task.priority]++;
 
-      // Count occurrences based on status
       statistics.status[task.status]++;
 
-      // Count occurrences of tasks with dueDate not null and status not done
       if (task.dueDate && task.status !== "done") {
         statistics.dueDate++;
       }
