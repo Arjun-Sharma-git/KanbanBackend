@@ -10,7 +10,12 @@ const {
   changeStatus,
   editTask,
 } = require("../controllers/task.js");
-const validateUnixTimestamp = require("../utils/validateUnixTimeStamp");
+const unixTimestampVerify = (value) => {
+  if (!/^\d{13}$/.test(value)) {
+    throw new Error("Invalid Unix timestamp");
+  }
+  return true;
+};
 
 router.post(
   "/createTask",
@@ -54,8 +59,8 @@ router.get(
   "/getAllTasks/:startTime/:endTime",
   verifyJwt,
   [
-    param("startTime").custom(validateUnixTimestamp),
-    param("endTime").custom(validateUnixTimestamp),
+    param("startTime").custom(unixTimestampVerify),
+    param("endTime").custom(unixTimestampVerify),
   ],
   validateRequest,
   async (req, res) => {
@@ -122,8 +127,6 @@ router.delete(
       await deleteTask(taskId, userId);
       res.send({ success: "true", data: "task Deleted successfully" });
     } catch (err) {
-      //err contains a object of error class , it contians a name which is a string that is error type and message that contains string that states the error . , to string converts both into string and give
-      // error in this format name:message //
       res.send({ success: "false", data: err.toString() });
     }
   }
