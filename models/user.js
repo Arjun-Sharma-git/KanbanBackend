@@ -14,10 +14,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  cards: [
+  tasks: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Card",
+      ref: "Task",
     },
   ],
 });

@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const cardSchema = new mongoose.Schema(
+const taskSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -31,4 +31,4 @@ const cardSchema = new mongoose.Schema(
     },
   }
 );
-module.exports = mongoose.model("Card", cardSchema);
+module.exports = mongoose.model("Task", taskSchema);
