@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { check, body, param } = require("express-validator");
-const { validateRequest } = require("../middlewares/requestValidator");
+const { validateRequest } = require("../middleware/requestValidatorMiddleware");
 const verifyJwt = require("../middlewares/authMiddleware");
 const {
   createTask,
