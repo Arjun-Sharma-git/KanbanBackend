@@ -47,8 +47,8 @@ const getAllTasks = async (userId, duration) => {
       done: [],
     };
 
-    allTasks.forEach((card) => {
-      tasksByStatus[card.status].push(card);
+    allTasks.forEach((task) => {
+      tasksByStatus[task.status].push(task);
     });
     return tasksByStatus;
   } catch (err) {
@@ -148,6 +148,22 @@ const editCheckList = async (TaskId, checkListId, isChecked) => {
   }
 };
 
+const getCheckListCount = async (taskId) => {
+  try {
+    const task = await Task.findById(taskId);
+    if (!task) throw new Error("Task Not Found");
+    const totalChecklistItems = task.checkList.length;
+    const completedChecklistItems = task.checkList.filter(
+      (item) => item.isCompleted
+    ).length;
+    const data = { completedChecklistItems, totalChecklistItems };
+    return data;
+  } catch (err) {
+    console.log(err);
+    return Promise.reject(err);
+  }
+};
+
 module.exports = {
   createTask,
   getAllTasks,
@@ -156,4 +172,5 @@ module.exports = {
   editTask,
   editCheckList,
   getSingleTask,
+  getCheckListCount
 };
