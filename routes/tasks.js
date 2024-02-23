@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const verifyJwt = require("../middleware/authMiddleware");
+
 const {
   createTask,
   getAllTasks,
@@ -10,6 +11,7 @@ const {
   editTask,
   getSingleTask,
   editCheckList,
+  getCheckListCount
 } = require("../controllers/task.js");
 
 const checks = {
@@ -99,6 +101,7 @@ router.get(
 
 router.put(
   "/editTask",
+  verifyJwt,
   async (req, res) => {
     try {
       const { taskId, title, priority, checkList } = req.body;
@@ -168,4 +171,22 @@ router.put(
   }
 );
 
+router.get(
+  "/getCheckListCount/:taskId",
+  verifyJwt,
+  async (req, res) => {
+    try {
+      const taskId = req.params.taskId;
+      if(!checks.taskId(req.params.taskId)){
+        console.log("Invalid input");
+        return res.send({ success: false, data: "Invalid input" });
+      }
+      const countData = await getCheckListCount(taskId);
+      res.send({ success: true, data: countData });
+    } catch (error) {
+      console.log(error);
+      res.send({ success: false, data: error.message });
+    }
+  }
+);
 module.exports = router;
