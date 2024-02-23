@@ -5,7 +5,6 @@ const { register, login ,updateUser} = require("../controllers/auth");
 
 const checks ={
   email: (value) => {
-      //{2,4} is the quantifer for the last part of the email
       const emailRegEx = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
       return emailRegEx.test(value);
   },
