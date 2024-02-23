@@ -17,10 +17,15 @@ const taskSchema = new mongoose.Schema(
     dueDate: {
       type: Date,
     },
+    status: {
+      type: String,
+      enum: ["toDo", "inProgress", "backlog", "done"],
+      default: "toDo",
+    },
     checkList: [
       {
         title: String,
-        isCompleted: Boolean,
+        isChecked: Boolean,
       },
     ],
   },

@@ -1,45 +1,51 @@
 const express = require("express");
 const router = express.Router();
-const { check, body, param } = require("express-validator");
-const { validateRequest } = require("../middleware/requestValidatorMiddleware");
-const verifyJwt = require("../middlewares/authMiddleware");
+const mongoose = require("mongoose");
+const verifyJwt = require("../middleware/authMiddleware");
 const {
   createTask,
   getAllTasks,
   deleteTask,
   changeStatus,
   editTask,
+  getSingleTask,
+  editCheckList,
 } = require("../controllers/task.js");
-const unixTimestampVerify = (value) => {
-  if (!/^\d{13}$/.test(value)) {
-    throw new Error("Invalid Unix timestamp");
+
+const checks = {
+  title: (value) => {
+    return value.length > 0;
+  },
+  priority: (value) => {
+    return ["low", "moderate", "high"].includes(value);
+  },
+  checkList: (value) => {
+    return value.length > 0;
+  },
+  taskId: (value) => {
+    return mongoose.Types.ObjectId.isValid(value);
+  },
+  checkListId: (value) => {
+    return mongoose.Types.ObjectId.isValid(value);
+  },
+  status: (value) => {
+    return ["toDo", "inProgress", "backlog", "done"].includes(value);
+  },
+  duration: (value) => {
+    return ["week", "month", "day"].includes(value);
   }
-  return true;
 };
 
 router.post(
   "/createTask",
   verifyJwt,
-  [
-    check("title", "Title is a required field").isString(),
-    check("priority", "priority is a required field")
-      .isIn(["low", "moderate", "high"])
-      .withMessage("invalid priority type"),
-    check("checkList")
-      .isArray()
-      .custom((value) => {
-        if (value.length > 0) {
-          return true;
-        }
-        throw new Error("CheckList must contain atleast 1 element");
-      }),
-    check("dueDate").optional(),
-  ],
-  validateRequest,
   async (req, res) => {
     try {
       const { userId, title, priority, checkList } = req.body;
       const dueDate = req.body.dueDate || null;
+      if(!checks.title(req.body.title) || !checks.priority(req.body.priority) || !checks.checkList(req.body.checkList)){
+        return res.send({ success: false, data: "Invalid input" });
+      }
       const data = await createTask(
         userId,
         title,
@@ -47,30 +53,45 @@ router.post(
         checkList,
         dueDate
       );
-      res.send({ success: "true", data: data });
+      res.send({ success: true, data: data });
     } catch (err) {
       console.log(err);
-      res.send({ success: "false", data: err.toString() });
+      res.send({ success: false, data: err.toString() });
     }
   }
 );
 
 router.get(
-  "/getAllTasks/:startTime/:endTime",
+  "/getAllTasks/:duration",
   verifyJwt,
-  [
-    param("startTime").custom(unixTimestampVerify),
-    param("endTime").custom(unixTimestampVerify),
-  ],
-  validateRequest,
   async (req, res) => {
     try {
       const userId = req.body.userId;
-      const { startTime, endTime } = req.params;
-      const data = await getAllTasks(userId, startTime, endTime);
-      res.send({ success: "true", data: data });
+      const {duration}  = req.params;
+      console.log(duration);
+      if(!checks.duration(duration)){
+        return res.send({ success: false, data: "Invalid input" });
+      }
+      const data = await getAllTasks(userId, duration);
+      res.send({ success: true, data: data });
     } catch (err) {
       console.log(err);
+      res.send({ success: false, data: err.toString() });
+    }
+  }
+);
+
+router.get(
+  "/getSingleTask/:taskId",
+  async (req, res) => {
+    try {
+      const taskId = req.params.taskId;
+      if(!checks.taskId(req.params.taskId)){
+        return res.send({ success: false, data: "Invalid input" });
+      }
+      const data = await getSingleTask(taskId);
+      res.send({ success: "true", data: data });
+    } catch (err) {
       res.send({ success: "false", data: err.toString() });
     }
   }
@@ -78,35 +99,18 @@ router.get(
 
 router.put(
   "/editTask",
-  verifyJwt,
-  [
-    check("taskId", "task Id needed").isMongoId(
-      "TaskId should be a valid mongoDb Id"
-    ),
-    check("title", "Title is a required field").isString(),
-    check("priority", "priority is a required field")
-      .isIn(["low", "moderate", "high"])
-      .withMessage("invalid priority type"),
-    check("checkList")
-      .isArray()
-      .custom((value) => {
-        if (value.length > 0) {
-          return true;
-        }
-        throw new Error("CheckList must contain atleast 1 element");
-      }),
-    check("dueDate").optional(),
-  ],
-  validateRequest,
   async (req, res) => {
     try {
       const { taskId, title, priority, checkList } = req.body;
       const dueDate = req.body.dueDate || null;
+      if(!checks.title(req.body.title) || !checks.priority(req.body.priority) || !checks.checkList(req.body.checkList) || !checks.taskId(req.body.taskId)){
+        return res.send({ success: false, data: "Invalid input" });
+      }
       const data = await editTask(taskId, title, priority, checkList, dueDate);
-      res.send({ success: "true", data: data });
+      res.send({ success: true, data: data });
     } catch (err) {
       console.log(err);
-      res.send({ success: "false", data: err.toString() });
+      res.send({ success: false, data: err.toString() });
     }
   }
 );
@@ -114,20 +118,17 @@ router.put(
 router.delete(
   "/deleteTask/:taskId",
   verifyJwt,
-  [
-    param("taskId", "task Id needed").isMongoId(
-      "TaskId should be a valid mongoDb Id"
-    ),
-  ],
-  validateRequest,
   async (req, res) => {
     try {
       const userId = req.body.userId;
       const taskId = req.params.taskId;
+      if(!checks.taskId(req.params.taskId)){
+        return res.send({ success: false, data: "Invalid input" });
+      }
       await deleteTask(taskId, userId);
-      res.send({ success: "true", data: "task Deleted successfully" });
+      res.send({ success: true, data: "Task deleted successfully" });
     } catch (err) {
-      res.send({ success: "false", data: err.toString() });
+      res.send({ success: false, data: err.toString() });
     }
   }
 );
@@ -135,21 +136,33 @@ router.delete(
 router.put(
   "/changeStatus",
   verifyJwt,
-  [
-    check("taskId", "task Id needed").isMongoId(
-      "TaskId should be a valid mongoDb Id"
-    ),
-    check("status")
-      .isIn(["toDo", "inProgress", "backlog", "done"])
-      .withMessage("Invalid Status type"),
-  ],
-  validateRequest,
   async (req, res) => {
     try {
       const { taskId, status } = req.body;
+      if(!checks.taskId(req.body.taskId) || !checks.status(req.body.status)){
+        return res.send({ success: false, data: "Invalid input" });
+      }
       const data = await changeStatus(taskId, status);
+      res.send({ success: true, data: data });
+    } catch (err) {
+      res.send({ success: false, data: err.toString() });
+    }
+  }
+);
+
+router.put(
+  "/editCheckList",
+  verifyJwt,
+  async (req, res) => {
+    try {
+      const { taskId, checkListId, isChecked } = req.body;
+      if(!checks.taskId(req.body.taskId) || !checks.checkListId(req.body.checkListId)){
+        return res.send({ success: false, data: "Invalid input" });
+      }
+      const data = await editCheckList(taskId, checkListId, isChecked);
       res.send({ success: "true", data: data });
     } catch (err) {
+      console.log(err);
       res.send({ success: "false", data: err.toString() });
     }
   }

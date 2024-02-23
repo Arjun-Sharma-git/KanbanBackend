@@ -1,6 +1,7 @@
 const Task = require("../models/task");
 const User = require("../models/user");
 const mongoose = require("mongoose");
+const moment = require('moment');
 
 const createTask = async (userId, title, priority, checkList, dueDate) => {
   try {
@@ -22,10 +23,14 @@ const createTask = async (userId, title, priority, checkList, dueDate) => {
   }
 };
 
-const getAllTasks = async (userId, startTime, endTime) => {
+const getAllTasks = async (userId, duration) => {
   try {
+    console.log(userId, duration);
+    const currentDate = moment();
+    const startTime = moment(currentDate).startOf(duration).valueOf();
+    const endTime = moment(currentDate).endOf(duration).valueOf();
+
     const tasks = await User.findById(userId).populate({
-      // **Notes--> This is the name of the key in the user Schema //
       path: "tasks",
       match: {
         createdAt: {
@@ -34,9 +39,31 @@ const getAllTasks = async (userId, startTime, endTime) => {
         },
       },
     });
-    return tasks;
+    const allTasks = tasks.tasks;
+    const tasksByStatus = {
+      toDo: [],
+      inProgress: [],
+      backlog: [],
+      done: [],
+    };
+
+    allTasks.forEach((card) => {
+      tasksByStatus[card.status].push(card);
+    });
+    return tasksByStatus;
   } catch (err) {
     console.log(err);
+    return Promise.reject(err);
+  }
+};
+const getSingleTask = async (taskId) => {
+  try {
+    const task = await Task.findById(taskId);
+    if (!task) {
+      throw new Error("Task not found");
+    }
+    return task;
+  } catch (err) {
     return Promise.reject(err);
   }
 };
@@ -84,6 +111,7 @@ const deleteTask = async (taskId, userId) => {
 
 const changeStatus = async (taskId, status) => {
   try {
+    
     const task = await Task.findById(taskId);
     if (!task) {
       throw new Error("Task Not Found");
@@ -101,10 +129,31 @@ const changeStatus = async (taskId, status) => {
   }
 };
 
+const editCheckList = async (TaskId, checkListId, isChecked) => {
+  try {
+    const updatedTask = await Task.findByIdAndUpdate(
+      TaskId,
+      { $set: { "checkList.$[elem].isChecked": isChecked } },
+      { new: true, arrayFilters: [{ "elem._id": checkListId }] }
+    );
+
+    if (!updatedTask) {
+      throw new Error("Task not found");
+    }
+
+    return updatedTask;
+  } catch (err) {
+    console.log(err);
+    return Promise.reject(err);
+  }
+};
+
 module.exports = {
   createTask,
   getAllTasks,
   deleteTask,
   changeStatus,
   editTask,
+  editCheckList,
+  getSingleTask,
 };

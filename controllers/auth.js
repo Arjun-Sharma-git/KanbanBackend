@@ -15,7 +15,7 @@ const register = async (name, email, password) => {
 
     const userResponse = await userData.save();
     const id = userResponse._id;
-    const token = jwt.sign({ userId: id }, process.env.JWT_SECRET);
+    const token = jwt.sign({ userId: id }, process.env.SECRET_KEY);
 
     const data = {
       message: "User registered successfully",
@@ -31,17 +31,17 @@ const register = async (name, email, password) => {
 
 const login = async (email, password) => {
   try {
-    const userDetails = await User.findOne({ email });
-    if (!userDetails) throw new Error("Invalid Credentials");
+    const userInfo = await User.findOne({ email });
+    if (!userInfo) throw new Error("Invalid Credentials");
 
-    const passwordMatch = await bcrypt.compare(password, userDetails.password);
+    const passwordMatch = await bcrypt.compare(password, userInfo.password);
     if (!passwordMatch) throw new Error("Invalid Credentials");
 
-    const token = jwt.sign({ userId: userDetails._id }, process.env.JWT_SECRET);
+    const token = jwt.sign({ userId: userInfo._id }, process.env.SECRET_KEY);
     const data = {
       message: "User logged in successfully",
       token: token,
-      name: userDetails.name,
+      name: userInfo.name,
     };
     return data;
   } catch (err) {
@@ -50,4 +50,29 @@ const login = async (email, password) => {
   }
 };
 
-module.exports = { register, login };
+const updateUser = async (userId, name, oldPassword, newPassword) => {
+  try {
+    const userInfo = await User.findById(userId);
+    const passwordMatch = await bcrypt.compare(
+      oldPassword,
+      userInfo.password
+    );
+    if (!passwordMatch) throw new Error("Passwords ");
+
+    userInfo.name = name;
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      userInfo.password = hashedPassword;
+    }
+
+    userInfo.save();
+    const data = "User updation success!!";
+    return data;
+  } catch (err) {
+    console.log(err);
+    return Promise.reject(err);
+  }
+};
+
+
+module.exports = { register, login, updateUser };

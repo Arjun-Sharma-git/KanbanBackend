@@ -1,17 +1,17 @@
 const express = require("express");
 const router = express.Router();
-const { check } = require("express-validator");
-const { validateRequest } = require("../middleware/requestValidatorMiddleware");
-const verifyJwt = require("../middlewares/authMiddleware");
+const verifyJwt = require("../middleware/authMiddleware");
 const { getAnalytics } = require("../controllers/analytics");
 
-router.get("/getAnalytics", verifyJwt, async (req, res) => {
+router.get("/getAnalytics",
+ verifyJwt,
+ async (req, res) => {
   try {
     const userId = req.body.userId;
     const data = await getAnalytics(userId);
-    res.send({ success: "true", data: data });
+    res.send({ success: true, data: data });
   } catch (err) {
-    res.send({ success: "false", data: err });
+    res.send({ success: false, data: err });
   }
 });
 module.exports = router;
