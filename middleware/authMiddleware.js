@@ -8,13 +8,13 @@ const verifyJwt = (req, res, next) => {
         success: false,
         data: "Unauthorised request on protected path",
       });
-      const verifyToken = jwt.verify(token, process.env.SECRET_KEY);
-      req.body.userId = verifyToken.userId;
-      next();
+    const verifyToken = jwt.verify(token, process.env.SECRET_KEY);
+    req.body.userId = verifyToken.userId;
+    next();
   } catch (err) {
     res.send({
       success: false,
-      data: "Corrupt token, revalidate (JWT)"
+      data: "Corrupt token, revalidate (JWT)",
     });
   }
 };

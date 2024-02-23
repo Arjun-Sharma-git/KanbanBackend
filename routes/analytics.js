@@ -3,9 +3,7 @@ const router = express.Router();
 const verifyJwt = require("../middleware/authMiddleware");
 const { getAnalytics } = require("../controllers/analytics");
 
-router.get("/getAnalytics",
- verifyJwt,
- async (req, res) => {
+router.get("/getAnalytics", verifyJwt, async (req, res) => {
   try {
     const userId = req.body.userId;
     const data = await getAnalytics(userId);

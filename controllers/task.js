@@ -1,7 +1,7 @@
 const Task = require("../models/task");
 const User = require("../models/user");
 const mongoose = require("mongoose");
-const moment = require('moment');
+const moment = require("moment");
 
 const createTask = async (userId, title, priority, checkList, dueDate) => {
   try {
@@ -95,7 +95,7 @@ const deleteTask = async (taskId, userId) => {
     if (!task) {
       throw new Error("Task not found");
     }
-    
+
     await User.findByIdAndUpdate(
       userId,
       { $pull: { tasks: taskId } },
@@ -111,7 +111,6 @@ const deleteTask = async (taskId, userId) => {
 
 const changeStatus = async (taskId, status) => {
   try {
-    
     const task = await Task.findById(taskId);
     if (!task) {
       throw new Error("Task Not Found");
@@ -172,5 +171,5 @@ module.exports = {
   editTask,
   editCheckList,
   getSingleTask,
-  getCheckListCount
+  getCheckListCount,
 };

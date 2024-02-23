@@ -53,10 +53,7 @@ const login = async (email, password) => {
 const updateUser = async (userId, name, oldPassword, newPassword) => {
   try {
     const userInfo = await User.findById(userId);
-    const passwordMatch = await bcrypt.compare(
-      oldPassword,
-      userInfo.password
-    );
+    const passwordMatch = await bcrypt.compare(oldPassword, userInfo.password);
     if (!passwordMatch) throw new Error("Passwords ");
 
     userInfo.name = name;
@@ -73,6 +70,5 @@ const updateUser = async (userId, name, oldPassword, newPassword) => {
     return Promise.reject(err);
   }
 };
-
 
 module.exports = { register, login, updateUser };
