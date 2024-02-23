@@ -26,10 +26,10 @@ const createTask = async (userId, title, priority, checkList, dueDate) => {
 const getAllTasks = async (userId, duration) => {
   try {
     console.log(userId, duration);
-    const currentDate = moment();
-    const startTime = moment(currentDate).startOf(duration).valueOf();
-    const endTime = moment(currentDate).endOf(duration).valueOf();
-
+    const dateNow = moment();
+    const startTime = moment(dateNow).startOf(duration).valueOf();
+    const endTime = moment(dateNow).endOf(duration).valueOf();
+    console.log(startTime, endTime);
     const tasks = await User.findById(userId).populate({
       path: "tasks",
       match: {
