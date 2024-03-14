@@ -150,7 +150,7 @@ router.put("/editCheckList", verifyJwt, async (req, res) => {
   }
 });
 
-router.get("/getCheckListCount/:taskId", verifyJwt, async (req, res) => {
+router.get("/getCheckListCount/:taskId", async (req, res) => {
   try {
     const taskId = req.params.taskId;
     if (!checks.taskId(req.params.taskId)) {
