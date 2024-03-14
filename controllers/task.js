@@ -153,7 +153,7 @@ const getCheckListCount = async (taskId) => {
     if (!task) throw new Error("Task Not Found");
     const totalChecklistItems = task.checkList.length;
     const completedChecklistItems = task.checkList.filter(
-      (item) => item.isCompleted
+      (item) => item.isChecked
     ).length;
     const data = { completedChecklistItems, totalChecklistItems };
     return data;
