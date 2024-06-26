@@ -10,8 +10,15 @@ const PORT = process.env.PORT || 3001;
 
 const app = express();
 
+const corsOptions = {
+  origin: 'https://kanban-project-rho.vercel.app', //frontend URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
 app.use(express.json());
-app.use(cors());
+app.use(cors(corsOptions));
 
 const MONGODB_URI = process.env.MONGODB_URL;
 mongoose
