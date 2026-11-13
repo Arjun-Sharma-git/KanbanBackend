@@ -14,154 +14,125 @@ const {
   getCheckListCount,
 } = require("../controllers/task.js");
 
+const isValidId = (value) => mongoose.Types.ObjectId.isValid(value);
+
 const checks = {
-  title: (value) => {
-    return value.length > 0;
-  },
-  priority: (value) => {
-    return ["low", "moderate", "high"].includes(value);
-  },
-  checkList: (value) => {
-    return value.length > 0;
-  },
-  taskId: (value) => {
-    return mongoose.Types.ObjectId.isValid(value);
-  },
-  checkListId: (value) => {
-    return mongoose.Types.ObjectId.isValid(value);
-  },
-  status: (value) => {
-    return ["toDo", "inProgress", "backlog", "done"].includes(value);
-  },
-  duration: (value) => {
-    return ["week", "month", "day"].includes(value);
-  },
+  title: (value) => typeof value === "string" && value.trim().length > 0,
+  priority: (value) => ["low", "moderate", "high"].includes(value),
+  checkList: (value) =>
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((item) => typeof item?.title === "string" && item.title.trim()),
+  status: (value) => ["toDo", "inProgress", "backlog", "done"].includes(value),
+  duration: (value) => ["week", "month", "day"].includes(value),
+};
+
+const invalid = (res, message = "Invalid input") =>
+  res.status(400).send({ success: false, data: message });
+
+const sendError = (res, err) =>
+  res.status(err.status || 500).send({ success: false, data: err.message });
+
+const validateTaskBody = ({ title, priority, checkList }) => {
+  if (!checks.title(title)) return "Title is required";
+  if (!checks.priority(priority)) return "Priority must be low, moderate or high";
+  if (!checks.checkList(checkList)) return "Add at least one checklist item with a title";
+  return null;
 };
 
 router.post("/createTask", verifyJwt, async (req, res) => {
   try {
-    const { userId, title, priority, checkList } = req.body;
+    const { title, priority, checkList } = req.body;
+    const error = validateTaskBody(req.body);
+    if (error) return invalid(res, error);
     const dueDate = req.body.dueDate || null;
-    if (
-      !checks.title(req.body.title) ||
-      !checks.priority(req.body.priority) ||
-      !checks.checkList(req.body.checkList)
-    ) {
-      return res.send({ success: false, data: "Invalid input" });
-    }
-    const data = await createTask(userId, title, priority, checkList, dueDate);
-    res.send({ success: true, data: data });
+    const data = await createTask(req.userId, title.trim(), priority, checkList, dueDate);
+    res.status(201).send({ success: true, data });
   } catch (err) {
-    console.log(err);
-    res.send({ success: false, data: err.toString() });
+    sendError(res, err);
   }
 });
 
 router.get("/getAllTasks/:duration", verifyJwt, async (req, res) => {
   try {
-    const userId = req.body.userId;
     const { duration } = req.params;
-    console.log(duration);
-    if (!checks.duration(duration)) {
-      return res.send({ success: false, data: "Invalid input" });
-    }
-    const data = await getAllTasks(userId, duration);
-    res.send({ success: true, data: data });
+    if (!checks.duration(duration)) return invalid(res);
+    const data = await getAllTasks(req.userId, duration);
+    res.send({ success: true, data });
   } catch (err) {
-    console.log(err);
-    res.send({ success: false, data: err.toString() });
+    sendError(res, err);
   }
 });
 
+// Public route: powers the shareable read-only task page.
 router.get("/getSingleTask/:taskId", async (req, res) => {
   try {
-    const taskId = req.params.taskId;
-    if (!checks.taskId(req.params.taskId)) {
-      return res.send({ success: false, data: "Invalid input" });
-    }
+    const { taskId } = req.params;
+    if (!isValidId(taskId)) return invalid(res);
     const data = await getSingleTask(taskId);
-    res.send({ success: "true", data: data });
+    res.send({ success: true, data });
   } catch (err) {
-    res.send({ success: "false", data: err.toString() });
+    sendError(res, err);
   }
 });
 
 router.put("/editTask", verifyJwt, async (req, res) => {
   try {
     const { taskId, title, priority, checkList } = req.body;
+    if (!isValidId(taskId)) return invalid(res);
+    const error = validateTaskBody(req.body);
+    if (error) return invalid(res, error);
     const dueDate = req.body.dueDate || null;
-    if (
-      !checks.title(req.body.title) ||
-      !checks.priority(req.body.priority) ||
-      !checks.checkList(req.body.checkList) ||
-      !checks.taskId(req.body.taskId)
-    ) {
-      return res.send({ success: false, data: "Invalid input" });
-    }
-    const data = await editTask(taskId, title, priority, checkList, dueDate);
-    res.send({ success: true, data: data });
+    const data = await editTask(req.userId, taskId, title.trim(), priority, checkList, dueDate);
+    res.send({ success: true, data });
   } catch (err) {
-    console.log(err);
-    res.send({ success: false, data: err.toString() });
+    sendError(res, err);
   }
 });
 
 router.delete("/deleteTask/:taskId", verifyJwt, async (req, res) => {
   try {
-    const userId = req.body.userId;
-    const taskId = req.params.taskId;
-    if (!checks.taskId(req.params.taskId)) {
-      return res.send({ success: false, data: "Invalid input" });
-    }
-    await deleteTask(taskId, userId);
-    res.send({ success: true, data: "Task deleted successfully" });
+    const { taskId } = req.params;
+    if (!isValidId(taskId)) return invalid(res);
+    const data = await deleteTask(req.userId, taskId);
+    res.send({ success: true, data });
   } catch (err) {
-    res.send({ success: false, data: err.toString() });
+    sendError(res, err);
   }
 });
 
 router.put("/changeStatus", verifyJwt, async (req, res) => {
   try {
     const { taskId, status } = req.body;
-    if (!checks.taskId(req.body.taskId) || !checks.status(req.body.status)) {
-      return res.send({ success: false, data: "Invalid input" });
-    }
-    const data = await changeStatus(taskId, status);
-    res.send({ success: true, data: data });
+    if (!isValidId(taskId) || !checks.status(status)) return invalid(res);
+    const data = await changeStatus(req.userId, taskId, status);
+    res.send({ success: true, data });
   } catch (err) {
-    res.send({ success: false, data: err.toString() });
+    sendError(res, err);
   }
 });
 
 router.put("/editCheckList", verifyJwt, async (req, res) => {
   try {
     const { taskId, checkListId, isChecked } = req.body;
-    if (
-      !checks.taskId(req.body.taskId) ||
-      !checks.checkListId(req.body.checkListId)
-    ) {
-      return res.send({ success: false, data: "Invalid input" });
-    }
-    const data = await editCheckList(taskId, checkListId, isChecked);
-    res.send({ success: "true", data: data });
+    if (!isValidId(taskId) || !isValidId(checkListId)) return invalid(res);
+    const data = await editCheckList(req.userId, taskId, checkListId, isChecked);
+    res.send({ success: true, data });
   } catch (err) {
-    console.log(err);
-    res.send({ success: "false", data: err.toString() });
+    sendError(res, err);
   }
 });
 
+// Public route: used by the shareable read-only task page.
 router.get("/getCheckListCount/:taskId", async (req, res) => {
   try {
-    const taskId = req.params.taskId;
-    if (!checks.taskId(req.params.taskId)) {
-      console.log("Invalid input");
-      return res.send({ success: false, data: "Invalid input" });
-    }
-    const countData = await getCheckListCount(taskId);
-    res.send({ success: true, data: countData });
-  } catch (error) {
-    console.log(error);
-    res.send({ success: false, data: error.message });
+    const { taskId } = req.params;
+    if (!isValidId(taskId)) return invalid(res);
+    const data = await getCheckListCount(taskId);
+    res.send({ success: true, data });
+  } catch (err) {
+    sendError(res, err);
   }
 });
+
 module.exports = router;

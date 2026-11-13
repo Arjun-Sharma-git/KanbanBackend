@@ -5,11 +5,11 @@ const { getAnalytics } = require("../controllers/analytics");
 
 router.get("/getAnalytics", verifyJwt, async (req, res) => {
   try {
-    const userId = req.body.userId;
-    const data = await getAnalytics(userId);
-    res.send({ success: true, data: data });
+    const data = await getAnalytics(req.userId);
+    res.send({ success: true, data });
   } catch (err) {
-    res.send({ success: false, data: err });
+    res.status(err.status || 500).send({ success: false, data: err.message });
   }
 });
+
 module.exports = router;

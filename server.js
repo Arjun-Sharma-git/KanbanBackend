@@ -2,33 +2,31 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
+
 const authRoutes = require("./routes/auth.js");
 const taskRoutes = require("./routes/tasks.js");
-const analyticsRoutes = require("./routes/analytics.js")
+const analyticsRoutes = require("./routes/analytics.js");
 
 const PORT = process.env.PORT || 3001;
+const FRONTEND_URL =
+  process.env.FRONTEND_URL || "https://kanban-project-rho.vercel.app";
 
 const app = express();
 
-const corsOptions = {
-  origin: 'https://kanban-project-rho.vercel.app', //frontend URL
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-};
-
 app.use(express.json());
-app.use(cors(corsOptions));
-
-const MONGODB_URI = process.env.MONGODB_URL;
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => {
-    console.log(`Successfully Connected to db at port ${PORT}`);
+app.use(
+  cors({
+    origin: FRONTEND_URL.split(",").map((url) => url.trim()),
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
-  .catch((err) => {
-    console.log("MongoDB connection failed!!", err);
-  });
+);
+
+mongoose
+  .connect(process.env.MONGODB_URL)
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection failed:", err.message));
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/task", taskRoutes);
@@ -38,6 +36,12 @@ app.get("/health", (req, res) => {
   res.json("status:active");
 });
 
-app.listen(3001, () => {
-  console.log("Server Online");
+app.use((req, res) => {
+  res.status(404).send({ success: false, data: "Route not found" });
 });
+
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
+
+module.exports = app;

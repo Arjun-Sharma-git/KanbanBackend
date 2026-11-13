@@ -2,73 +2,57 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 
+const SALT_ROUNDS = 10;
+
+const httpError = (status, message) => {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+};
+
+const signToken = (userId) =>
+  jwt.sign({ userId }, process.env.SECRET_KEY, { expiresIn: "7d" });
+
 const register = async (name, email, password) => {
-  try {
-    const isExistingUser = await User.findOne({ email: email });
-    if (isExistingUser) throw new Error("User already exists!");
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const userData = new User({
-      name,
-      email,
-      password: hashedPassword,
-    });
+  const existingUser = await User.findOne({ email });
+  if (existingUser) throw httpError(409, "User already exists!");
 
-    const userResponse = await userData.save();
-    const id = userResponse._id;
-    const token = jwt.sign({ userId: id }, process.env.SECRET_KEY);
+  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+  const user = await User.create({ name, email, password: hashedPassword });
 
-    const data = {
-      message: "User registered successfully",
-      token: token,
-      name: name,
-    };
-    return data;
-  } catch (error) {
-    console.log(error);
-    return Promise.reject(error);
-  }
+  return {
+    message: "User registered successfully",
+    token: signToken(user._id),
+    name: user.name,
+  };
 };
 
 const login = async (email, password) => {
-  try {
-    const userInfo = await User.findOne({ email });
-    if (!userInfo) throw new Error("Invalid Credentials");
+  const user = await User.findOne({ email });
+  const passwordMatch = user && (await bcrypt.compare(password, user.password));
+  if (!passwordMatch) throw httpError(401, "Invalid Credentials");
 
-    const passwordMatch = await bcrypt.compare(password, userInfo.password);
-    if (!passwordMatch) throw new Error("Invalid Credentials");
-
-    const token = jwt.sign({ userId: userInfo._id }, process.env.SECRET_KEY);
-    const data = {
-      message: "User logged in successfully",
-      token: token,
-      name: userInfo.name,
-    };
-    return data;
-  } catch (err) {
-    console.log(err);
-    return Promise.reject(err);
-  }
+  return {
+    message: "User logged in successfully",
+    token: signToken(user._id),
+    name: user.name,
+  };
 };
 
 const updateUser = async (userId, name, oldPassword, newPassword) => {
-  try {
-    const userInfo = await User.findById(userId);
-    const passwordMatch = await bcrypt.compare(oldPassword, userInfo.password);
-    if (!passwordMatch) throw new Error("Passwords ");
+  const user = await User.findById(userId);
+  if (!user) throw httpError(404, "User not found");
 
-    userInfo.name = name;
-    if (newPassword) {
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      userInfo.password = hashedPassword;
-    }
+  const passwordMatch = await bcrypt.compare(oldPassword, user.password);
+  if (!passwordMatch) throw httpError(400, "Old password is incorrect");
 
-    userInfo.save();
-    const data = "User updation success!!";
-    return data;
-  } catch (err) {
-    console.log(err);
-    return Promise.reject(err);
+  user.name = name;
+  if (newPassword) {
+    user.password = await bcrypt.hash(newPassword, SALT_ROUNDS);
   }
+  await user.save();
+
+  return "User details updated successfully";
 };
 
-module.exports = { register, login, updateUser };
+module.exports = { register, login, updateUser, httpError };
