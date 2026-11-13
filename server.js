@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 
 const authRoutes = require("./routes/auth.js");
@@ -13,7 +14,8 @@ const FRONTEND_URL =
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
+app.use(cookieParser());
 app.use(
   cors({
     origin: FRONTEND_URL.split(",").map((url) => url.trim()),

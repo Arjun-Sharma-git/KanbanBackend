@@ -15,6 +15,28 @@ const checks = {
 const sendError = (res, err) =>
   res.status(err.status || 500).send({ success: false, data: err.message });
 
+// The JWT is delivered as an httpOnly cookie so page JavaScript can never read
+// it (an XSS payload cannot steal a token it cannot see). In production the
+// frontend and API are served from the same origin, so SameSite=Lax applies
+// and also mitigates CSRF; set SAME_SITE=none;Secure only if they are split
+// across sites.
+const isProd = process.env.NODE_ENV === "production";
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isProd && process.env.CROSS_SITE_COOKIE === "true" ? "none" : "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days, matches the JWT lifetime
+};
+
+const sendAuth = (res, status, data) => {
+  res.cookie("token", data.token, cookieOptions);
+  // The token is set as a cookie only; it is deliberately not returned in the body.
+  res.status(status).send({
+    success: true,
+    data: { name: data.name, message: data.message },
+  });
+};
+
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -25,7 +47,7 @@ router.post("/register", async (req, res) => {
       });
     }
     const data = await register(name.trim(), email, password);
-    res.status(201).send({ success: true, data });
+    sendAuth(res, 201, data);
   } catch (err) {
     sendError(res, err);
   }
@@ -40,10 +62,16 @@ router.post("/login", async (req, res) => {
         .send({ success: false, data: "Please enter a valid email and password" });
     }
     const data = await login(email, password);
-    res.send({ success: true, data });
+    sendAuth(res, 200, data);
   } catch (err) {
     sendError(res, err);
   }
+});
+
+router.post("/logout", (req, res) => {
+  // clearCookie must receive the same options the cookie was set with.
+  res.clearCookie("token", { ...cookieOptions, maxAge: undefined });
+  res.send({ success: true, data: "Logged out" });
 });
 
 router.put("/updateUser", verifyJwt, async (req, res) => {
